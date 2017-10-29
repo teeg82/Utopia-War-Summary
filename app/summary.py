@@ -22,7 +22,6 @@ if __name__ == "__main__":
     credentials = file.readlines()
     username = credentials[0].strip()
     password = credentials[1].strip()
-    import pdb; pdb.set_trace()
 
     logging.debug("Connecting to %s" % UTOPIA_HOME)
     req.open(UTOPIA_HOME)
