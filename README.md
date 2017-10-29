@@ -1,8 +1,19 @@
+# Purpose
+
+This script will 
+
 # Installation
 
 [Install Docker](https://docs.docker.com/engine/installation/#supported-platforms)
 
 Build the docker image from the project root using `./build.sh`.
+
+## But I don't want to install docker!
+
+- Install Python 2.7 (https://www.python.org/download/releases/2.7/)
+- (Optional) install Virtualenv (https://virtualenv.pypa.io/en/stable/installation/)
+- (Optional) Create a virtualenv environment for the summary and activate it
+- Run `RUN pip install beautifulsoup4 requests mechanize`
 
 # Usage
 
