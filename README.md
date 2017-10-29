@@ -6,6 +6,13 @@ Build the docker image from the project root using `./build.sh`.
 
 # Usage
 
+Add your username and password to the `credentials.txt` file on seperate lines. Example:
+
+```
+theRoundTable
+myPasssword123
+```
+
 From the project root, run `./run.sh`, or 
 
 ```
