@@ -1,7 +1,3 @@
-# Purpose
-
-This script will 
-
 # Installation
 
 [Install Docker](https://docs.docker.com/engine/installation/#supported-platforms)
