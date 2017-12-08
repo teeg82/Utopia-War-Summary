@@ -9,6 +9,7 @@ import logging
 import sys
 from slacker import Slacker
 import os
+import click
 
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -26,7 +27,10 @@ SLACK_TOKEN = os.getenv('SLACK_TOKEN', '')
 if len(sys.argv) > 1 and sys.argv[1] is not None:
     logging.basicConfig(level=logging.DEBUG)
 
-def fetch():
+@click.command()
+@click.option("--noformat", default=False, help="If true, will not submit to utopia formatter" )
+@click.option("--nopost", default=False, help="If true, will not post to slack")
+def fetch(noformat, nopost):
     logging.debug("Opening credentials file")
     file = open('credentials.txt', 'r')
     credentials = file.readlines()
@@ -65,7 +69,7 @@ def fetch():
         monthly_summary = []
         # If the war declaration line is on this page, it means this is the point that the war began.
         # In that case, this will be the last iteration because we now have the entire war history.
-        war_declaration = soup(text=re.compile(r"has declared WAR with our kingdom!"))
+        war_declaration = soup(text=re.compile(r"declared WAR"))
         if war_declaration is not None and len(war_declaration) > 0:
             logging.debug("War declaration line found.")
             # Start at the war declaration line
@@ -108,8 +112,10 @@ def fetch():
         war_summary_text = "\n".join(war_summary)
         # print war_summary_text
 
-        formatted_summary = fetch_summary(war_summary_text)
-        post_summary(formatted_summary)
+        if not noformat:
+            formatted_summary = fetch_summary(war_summary_text)
+            if not nopost:
+                post_summary(formatted_summary)
 
 
 def fetch_summary(war_summary_text):
