@@ -1,0 +1,38 @@
+# This files contains everything needed to run this stack in development, staging, or production
+
+version: '3.4'
+
+services:
+  db:
+    image: paulrichter/uws_db:1.0
+    restart: unless-stopped
+    ports:
+      - 5436:5432
+    networks:
+      - uws
+    volumes:
+      - uws_db:/uwsDB
+    environment:
+      POSTGRES_USER: camelot
+      POSTGRES_PASSWORD: camelot
+      PGDATA: /uwsDB
+      POSTGRES_DB: uws
+  uws:
+    image: paulrichter/utopia_war_summary:2.0
+    restart: unless-stopped
+    networks:
+      - uws
+    environment:
+      - SLACK_TOKEN=${SLACK_TOKEN}
+      - SLACK_USERNAME=${SLACK_USERNAME}
+      - UTOPIA_AGE=77
+    stdin_open: true
+    tty: true
+    command: "python summary.py"
+
+volumes:
+  uws_db:
+
+networks:
+  uws:
+    attachable: true

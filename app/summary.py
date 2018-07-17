@@ -24,13 +24,15 @@ FORMATTER_HOME = "http://home-world.org/utopia/formatter/"
 
 SLACK_TOKEN = os.getenv('SLACK_TOKEN', '')
 
-if len(sys.argv) > 1 and sys.argv[1] is not None:
-    logging.basicConfig(level=logging.DEBUG)
+# if len(sys.argv) > 1 and sys.argv[1] is not None:
+logging.basicConfig(level=logging.DEBUG)
 
 @click.command()
 @click.option("--noformat", default=False, help="If true, will not submit to utopia formatter" )
 @click.option("--nopost", default=False, help="If true, will not post to slack")
-def fetch(noformat, nopost):
+
+def _login_utopia():
+    """Log in to utopia."""
     logging.debug("Opening credentials file")
     file = open('credentials.txt', 'r')
     credentials = file.readlines()
@@ -44,10 +46,10 @@ def fetch(noformat, nopost):
     for index, form in enumerate(req.forms()):
         if form.attrs['id'] == 'signInForm':
             signin_form_index = index
-            break;
+            break
 
-    # If this was none, we might already be logged in (for some reason)
-    # Otherwise, log in
+    # If this was none, we might already be logged in (for some reason),
+    # otherwise, log in.
     if signin_form_index is not None:
         logging.debug("Logging in...")
         req.select_form(nr=signin_form_index)
@@ -56,6 +58,9 @@ def fetch(noformat, nopost):
         req.submit()
         logging.debug("Login appears to be successful")
 
+
+def _get_kingdom_news():
+    """Scrape the utopia kingdom news page until the beginning of the war is reached."""
     logging.debug("Opening kingdom news")
     req.open(KINGDOM_NEWS)
 
@@ -102,15 +107,21 @@ def fetch(noformat, nopost):
                 logging.info("Link to 'Previous' not found. Start of age reached.")
                 incomplete_summary = False
         war_summary += reversed(monthly_summary)
+    return war_summary
+
+
+def fetch(noformat, nopost):
+    """Get the utopia kingdom news and send it to the utopia formatter, then post the result to slack."""
+    _login_utopia()
+    war_summary = _get_kingdom_news()
 
     if len(war_summary) == 0:
         logging.debug("War summary size was zero. No kingdom news was found. Is this the beginning of the age?")
-        print "Could not find any kingdom news. Either this is the beginning of the age, or something horrible has happened."
+        print("Could not find any kingdom news. Either this is the beginning of the age, or something horrible has happened.")
     else:
         logging.debug("Compiling war summary.")
         war_summary = reversed(war_summary)
         war_summary_text = "\n".join(war_summary)
-        # print war_summary_text
 
         if not noformat:
             formatted_summary = fetch_summary(war_summary_text)
@@ -119,6 +130,7 @@ def fetch(noformat, nopost):
 
 
 def fetch_summary(war_summary_text):
+    """Given a war summary text, submit the summary to the utopia formatter and scrape results from the response."""
     req.open(FORMATTER_HOME)
     logging.debug("Submitting war summary to formatter")
     req.select_form(name="post")
@@ -140,15 +152,16 @@ def fetch_summary(war_summary_text):
             # We've reached the end
             if 'highlights' in results.attrs['class']:
                 summary_html.append(str(results.nextSibling))
-                break;
+                break
 
     formatted_summary = html2text.html2text("".join(summary_html))
     formatted_summary = formatted_summary.replace("\n\n", "\n")
-    print formatted_summary
+    print(formatted_summary)
     return formatted_summary
 
 
 def post_summary(war_summary_text):
+    """Post the scraped summary from the formatter to the war summary slack channel."""
     logging.debug("Posting message to slack")
     slack = Slacker(SLACK_TOKEN)
     slack.files.upload(channels='#war-summary', content=war_summary_text, filename="war_summary", title="War Summary")
