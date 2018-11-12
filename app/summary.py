@@ -10,6 +10,8 @@ import sys
 from slacker import Slacker
 import os
 import click
+from parser import parse_summaries
+from db import fetch_aggregated_acres
 
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -22,14 +24,24 @@ UTOPIA_HOME = "http://utopia-game.com/shared/"
 KINGDOM_NEWS = "http://utopia-game.com/wol/game/kingdom_news"
 FORMATTER_HOME = "http://home-world.org/utopia/formatter/"
 
+SUMMARY_ENV = os.getenv('SUMMARY_ENV', 'DEBUG')
 SLACK_TOKEN = os.getenv('SLACK_TOKEN', '')
 
-# if len(sys.argv) > 1 and sys.argv[1] is not None:
-logging.basicConfig(level=logging.DEBUG)
+if SUMMARY_ENV == 'DEBUG':
+    SUMMARY_CHANNEL = '#area51'
+else:
+    SUMMARY_CHANNEL = '#war-summary'
 
-@click.command()
-@click.option("--noformat", default=False, help="If true, will not submit to utopia formatter" )
-@click.option("--nopost", default=False, help="If true, will not post to slack")
+FIXTURE_FILE = "summary3.txt"
+
+DECLARED_WAR_RE = re.compile(r"declared WAR")
+
+# if len(sys.argv) > 1 and sys.argv[1] is not None:
+logging.basicConfig(level=logging.INFO)
+
+# @click.command()
+# @click.option("--noformat", default=False, help="If true, will not submit to utopia formatter" )
+# @click.option("--nopost", default=False, help="If true, will not post to slack")
 
 def _login_utopia():
     """Log in to utopia."""
@@ -62,7 +74,9 @@ def _login_utopia():
 def _get_kingdom_news():
     """Scrape the utopia kingdom news page until the beginning of the war is reached."""
     logging.debug("Opening kingdom news")
-    req.open(KINGDOM_NEWS)
+
+    if(SUMMARY_ENV != 'DEBUG'):
+        req.open(KINGDOM_NEWS)
 
     war_summary = []
 
@@ -74,7 +88,7 @@ def _get_kingdom_news():
         monthly_summary = []
         # If the war declaration line is on this page, it means this is the point that the war began.
         # In that case, this will be the last iteration because we now have the entire war history.
-        war_declaration = soup(text=re.compile(r"declared WAR"))
+        war_declaration = soup(text=DECLARED_WAR_RE)
         if war_declaration is not None and len(war_declaration) > 0:
             logging.debug("War declaration line found.")
             # Start at the war declaration line
@@ -110,23 +124,84 @@ def _get_kingdom_news():
     return war_summary
 
 
-def fetch(noformat, nopost):
+def _load_news_from_fixture():
+    target_fixture = 'fixtures/%s' % FIXTURE_FILE
+
+    logging.debug("Opening fixture file %s" % target_fixture)
+
+    with open(target_fixture) as f:
+        summary = f.read().splitlines()
+    return summary
+
+
+def fetch(noformat=False, nopost=False):
     """Get the utopia kingdom news and send it to the utopia formatter, then post the result to slack."""
     _login_utopia()
-    war_summary = _get_kingdom_news()
+    if SUMMARY_ENV == 'DEBUG':
+        war_summary = _load_news_from_fixture()
+    else:
+        war_summary = _get_kingdom_news()
 
     if len(war_summary) == 0:
         logging.debug("War summary size was zero. No kingdom news was found. Is this the beginning of the age?")
         print("Could not find any kingdom news. Either this is the beginning of the age, or something horrible has happened.")
     else:
         logging.debug("Compiling war summary.")
-        war_summary = reversed(war_summary)
-        war_summary_text = "\n".join(war_summary)
+        # war_summary = reversed(war_summary)
+        save_summary(war_summary)
+        formatted_summary = generate_war_summary()
+        # formatted_summary = "\n".join(war_summary)
 
         if not noformat:
-            formatted_summary = fetch_summary(war_summary_text)
+            # formatted_summary = fetch_summary(war_summary_text)
             if not nopost:
                 post_summary(formatted_summary)
+
+
+def save_summary(summaries):
+    parse_summaries(summaries)
+    # parsed_summaries = []
+    # for summary in summaries:
+    #     parsed_summaries.append(parser.parse(summary))
+
+
+def generate_war_summary():
+    aggregated_acres = fetch_aggregated_acres()
+    # import pdb; pdb.set_trace()
+
+    summary = []
+
+    for kingdom in aggregated_acres.keys():
+        header = "\n\n** The Kingdom of %s **\n" % kingdom
+
+        provinces = aggregated_acres[kingdom]
+
+        total_land = 0
+        total_hits_for = 0
+        total_hits_against = 0
+
+        provinces_summary_list = []
+        for province in provinces:
+            province_name = province['province']
+            acres = province['acres']
+            acres_str = "+{:,}".format(acres) if acres > 0 else "{:,}".format(acres)
+
+            hits_for = province['hits_for']
+            hits_against = province['hits_against']
+
+            total_land += acres
+            total_hits_for += hits_for
+            total_hits_against += hits_against
+
+            province_line = "{:>10} {:<1} ({:,}/{:,})".format(acres_str, province_name, hits_for, hits_against)
+            provinces_summary_list.append(province_line)
+
+        total_land_str = "+{:,}".format(total_land) if total_land > 0 else "{:,}".format(total_land)
+        total_land_exchanged = "Total land exchanged: {} ({:,}/{:,})".format(total_land_str, total_hits_for, total_hits_against)
+        provinces_summary_list.insert(0, total_land_exchanged)
+
+        summary.append(header + "\n".join(provinces_summary_list))
+    return "\n".join(summary)
 
 
 def fetch_summary(war_summary_text):
@@ -162,9 +237,9 @@ def fetch_summary(war_summary_text):
 
 def post_summary(war_summary_text):
     """Post the scraped summary from the formatter to the war summary slack channel."""
-    logging.debug("Posting message to slack")
+    logging.debug("Posting message to %s" % SUMMARY_CHANNEL)
     slack = Slacker(SLACK_TOKEN)
-    slack.files.upload(channels='#war-summary', content=war_summary_text, filename="war_summary", title="War Summary")
+    slack.files.upload(channels=SUMMARY_CHANNEL, content=war_summary_text, filename="war_summary", title="War Summary")
     logging.debug("Slack should have received the message.")
 
 

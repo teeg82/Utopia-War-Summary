@@ -1,6 +1,6 @@
 FROM python:2.7.14-alpine
 
-RUN apk update && apk add gcc musl-dev libffi-dev libxml2-dev libxslt-dev zlib-dev
+RUN apk update && apk add postgresql-dev gcc musl-dev libffi-dev libxml2-dev libxslt-dev zlib-dev
 
 RUN pip install beautifulsoup4 \
                 requests \
@@ -16,7 +16,7 @@ RUN mkdir -p /uws
 COPY ./app /uws
 COPY credentials.txt /uws
 
-COPY entrypoint.sh /usr/local/bin
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# COPY entrypoint.sh /usr/local/bin
+# RUN chmod +x /usr/local/bin/entrypoint.sh
 
 WORKDIR /uws

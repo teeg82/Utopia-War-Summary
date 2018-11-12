@@ -3,36 +3,29 @@
 version: '3.4'
 
 services:
-  db:
-    image: paulrichter/uws_db:1.0
-    restart: unless-stopped
-    ports:
-      - 5436:5432
-    networks:
-      - uws
-    volumes:
-      - uws_db:/uwsDB
-    environment:
-      POSTGRES_USER: camelot
-      POSTGRES_PASSWORD: camelot
-      PGDATA: /uwsDB
-      POSTGRES_DB: uws
-  uws:
+  bot:
     image: paulrichter/utopia_war_summary:2.0
-    restart: unless-stopped
+    # restart: unless-stopped
     networks:
-      - uws
+      - camelot_glory_wall
     environment:
       - SLACK_TOKEN=${SLACK_TOKEN}
       - SLACK_USERNAME=${SLACK_USERNAME}
-      - UTOPIA_AGE=77
+      - UTOPIA_AGE=78
     stdin_open: true
     tty: true
     command: "python summary.py"
-
-volumes:
-  uws_db:
+  pgweb:
+    restart: unless-stopped
+    image: sosedoff/pgweb
+    networks:
+      - camelot_glory_wall
+    ports:
+      - "8081:8081"
+    environment:
+      - DATABASE_URL=postgres://camelot:camelot@camelot_db_1:5432/camelot?sslmode=disable
+      # - POSTGRES_PASSWORD=camelot
 
 networks:
-  uws:
-    attachable: true
+  camelot_glory_wall:
+    external: true
