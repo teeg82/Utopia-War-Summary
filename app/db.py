@@ -17,9 +17,10 @@ from peewee import (
     AutoField,
     CharField,
     TextField,
+    DateTimeField,
 )
 
-connection = PostgresqlDatabase('camelot', user='camelot', password='camelot',
+connection = PostgresqlDatabase('war_summary', user='war_summary', password='war_summary',
                                                host='db', port=5432)
 
 class BaseModel(Model):
@@ -40,6 +41,7 @@ class NewsEntry(BaseModel):
     amount = IntegerField()
     utopia_date = CharField()
     month_order = CharField()
+    calculated_date = DateTimeField()
 
 
 class ParseLog(BaseModel):
@@ -50,6 +52,17 @@ class ParseLog(BaseModel):
     original_text = TextField()
     stack_trace = TextField()
     error_type = CharField()
+
+
+def fetch_own_kingdom_summary():
+    query = r"""
+    SELECT originator_kingdom, news_type, SUM(amount) as total, count(*) as hits
+    FROM camelot_news_entries
+    WHERE news_type LIKE %(outbound)s
+    group by originator_kingdom, news_type
+    """
+    results = connection.execute_sql(query, params={'outbound': 'OUTBOUND_%'})
+    json_results = {}
 
 def fetch_aggregated_acres():
     query = r"""

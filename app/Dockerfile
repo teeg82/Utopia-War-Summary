@@ -13,8 +13,8 @@ RUN pip install beautifulsoup4 \
                 click
 
 RUN mkdir -p /uws
-COPY ./app /uws
-COPY credentials.txt /uws
+COPY ./ /uws
+COPY ./credentials/utopia.txt /uws/credentials.txt
 
 # COPY entrypoint.sh /usr/local/bin
 # RUN chmod +x /usr/local/bin/entrypoint.sh

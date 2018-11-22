@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS camelot_news_entries
     target_kingdom VARCHAR(8),
     amount INTEGER,
     utopia_date VARCHAR(50),
+    calculated_date timestamp,
     month_order INTEGER
 );
 

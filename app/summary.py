@@ -11,7 +11,7 @@ from slacker import Slacker
 import os
 import click
 from parser import parse_summaries
-from db import fetch_aggregated_acres
+from renderer import render_summary
 
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -166,42 +166,7 @@ def save_summary(summaries):
 
 
 def generate_war_summary():
-    aggregated_acres = fetch_aggregated_acres()
-    # import pdb; pdb.set_trace()
-
-    summary = []
-
-    for kingdom in aggregated_acres.keys():
-        header = "\n\n** The Kingdom of %s **\n" % kingdom
-
-        provinces = aggregated_acres[kingdom]
-
-        total_land = 0
-        total_hits_for = 0
-        total_hits_against = 0
-
-        provinces_summary_list = []
-        for province in provinces:
-            province_name = province['province']
-            acres = province['acres']
-            acres_str = "+{:,}".format(acres) if acres > 0 else "{:,}".format(acres)
-
-            hits_for = province['hits_for']
-            hits_against = province['hits_against']
-
-            total_land += acres
-            total_hits_for += hits_for
-            total_hits_against += hits_against
-
-            province_line = "{:>10} {:<1} ({:,}/{:,})".format(acres_str, province_name, hits_for, hits_against)
-            provinces_summary_list.append(province_line)
-
-        total_land_str = "+{:,}".format(total_land) if total_land > 0 else "{:,}".format(total_land)
-        total_land_exchanged = "Total land exchanged: {} ({:,}/{:,})".format(total_land_str, total_hits_for, total_hits_against)
-        provinces_summary_list.insert(0, total_land_exchanged)
-
-        summary.append(header + "\n".join(provinces_summary_list))
-    return "\n".join(summary)
+    return render_summary()
 
 
 def fetch_summary(war_summary_text):

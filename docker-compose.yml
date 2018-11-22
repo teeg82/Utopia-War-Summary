@@ -3,11 +3,25 @@
 version: '3.4'
 
 services:
+  db:
+    image: paulrichter/camelot_db:1.0
+    restart: unless-stopped
+    ports:
+      - 5435:5432
+    networks:
+      - war_summary
+    volumes:
+      - war_summary_db:/war_summary
+    environment:
+      POSTGRES_USER: war_summary
+      POSTGRES_PASSWORD: war_summary
+      PGDATA: /war_summary
+      POSTGRES_DB: war_summary
   bot:
     image: paulrichter/utopia_war_summary:2.0
     # restart: unless-stopped
     networks:
-      - camelot_glory_wall
+      - war_summary
     environment:
       - SLACK_TOKEN=${SLACK_TOKEN}
       - SLACK_USERNAME=${SLACK_USERNAME}
@@ -19,13 +33,16 @@ services:
     restart: unless-stopped
     image: sosedoff/pgweb
     networks:
-      - camelot_glory_wall
+      - war_summary
     ports:
       - "8081:8081"
     environment:
-      - DATABASE_URL=postgres://camelot:camelot@camelot_db_1:5432/camelot?sslmode=disable
+      - DATABASE_URL=postgres://war_summary:war_summary@war_summary_db_1:5432/war_summary?sslmode=disable
       # - POSTGRES_PASSWORD=camelot
 
 networks:
-  camelot_glory_wall:
-    external: true
+  war_summary:
+    attachable: true
+
+volumes:
+  war_summary_db:
