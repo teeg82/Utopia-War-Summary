@@ -37,7 +37,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - DATABASE_URL=postgres://war_summary:war_summary@war_summary_db_1:5432/war_summary?sslmode=disable
+      - DATABASE_URL=postgres://war_summary:war_summary@db:5432/war_summary?sslmode=disable
       # - POSTGRES_PASSWORD=camelot
 
 networks:
